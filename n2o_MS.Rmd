@@ -194,6 +194,8 @@ summary((lmer(n2o_a~sqrt_Nfer_kgha+orgc_a+PPFD_total_a+max_fapar+vpd_a+min_fapar
 #this is our model
 mod5 <- ((lmer(n2o_a~orgc_a+sqrt_Nfer_kgha+vpd_a+Tg_a+PPFD_total_a+max_fapar+min_fapar+(1|site_a),data=cropland_data)))
 summary(mod5)
+r.squaredGLMM(mod5)
+
 LPX_cropland_sitemean <- unique(cropland_data[,c("lon","lat","z","pft")])
 
 #merged with LPX simulations (year-by-year SH6 simulations from 1980 to 2016, for all sites)
@@ -320,6 +322,7 @@ AIC(lm(logr~log_co2+Nfer_a+PPFD_total_a+ndep_a,df1_all_test))
 #so the best model is: 
 mod1 <- (lm(logr~log_co2+Nfer_a+PPFD_total_a,df1_all_test))
 summary(mod1)
+r.squaredGLMM(mod1)
 
 #start LPX comparasion
 LPX_co2_sitemean <- na.omit(df1_all[,c("lon","lat","z","pft","logr","log_co2","Nfer_a","PPFD_total_a")])
@@ -413,6 +416,7 @@ AIC(lm(logr~dT+orgc_a+ndep_a,df2_all_test))
 #so the best should just be:
 mod3 <- (lm(logr~orgc_a+dT,df2_all))
 summary(mod3)
+r.squaredGLMM(mod3)
 
 #applied in lpx model
 LPX_warming_sitemean <- na.omit(df2_all[,c("lon","lat","dT","orgc_a","logr")])
@@ -585,7 +589,7 @@ summary(PPFD_total_df)
 #the method is same as warming model - but here we remove intercept term because the intercept is non-significant
 #we assume n2o at ambient condition is 380, then co2-e at 416 and 813ppm separately to get feedback value
 final1a <- sum(329.29*fraction*exp(0+ summary(mod1)$coefficients[2,1]*log(416/380)+
-                                     summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+
+                                     summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+ #here *10 is to convert n fertilisation unit from g/m2 to kg/ha
                                      summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
 
 final3a <- sum(329.29*fraction*exp(0+ summary(mod1)$coefficients[2,1]*log(813/380)+
