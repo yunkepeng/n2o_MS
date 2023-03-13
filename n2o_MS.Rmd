@@ -294,30 +294,30 @@ df1_all_test <- na.omit(df1_all[,c("log_co2","Nfer_a","min_fapar","max_fapar","P
 
 #start stepwise regression
 #log(co2-e/co2-a) should be the first factor selected, then select factors step-by-step
-AIC(lm(logr~log_co2,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a,df1_all_test)) # this one is the best
-AIC(lm(logr~log_co2+min_fapar,df1_all_test)) 
-AIC(lm(logr~log_co2+max_fapar,df1_all_test))
-AIC(lm(logr~log_co2+PPFD_total_a,df1_all_test))
-AIC(lm(logr~log_co2+Tg,df1_all_test))
-AIC(lm(logr~log_co2+vpd_a,df1_all_test))
-AIC(lm(logr~log_co2+orgc_a,df1_all_test))
-AIC(lm(logr~log_co2+ndep_a,df1_all_test))
+summary(lm(logr~log_co2,df1_all_test))$r.squared
+summary(lm(logr~log_co2+Nfer_a,df1_all_test))$r.squared # this one is the best
+summary(lm(logr~log_co2+min_fapar,df1_all_test))$r.squared 
+summary(lm(logr~log_co2+max_fapar,df1_all_test))$r.squared
+summary(lm(logr~log_co2+PPFD_total_a,df1_all_test))$r.squared
+summary(lm(logr~log_co2+Tg,df1_all_test))$r.squared
+summary(lm(logr~log_co2+vpd_a,df1_all_test))$r.squared
+summary(lm(logr~log_co2+orgc_a,df1_all_test))$r.squared
+summary(lm(logr~log_co2+ndep_a,df1_all_test))$r.squared
 
 #then in further
-AIC(lm(logr~log_co2+Nfer_a+max_fapar,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a+PPFD_total_a,df1_all_test)) #this one is the best
-AIC(lm(logr~log_co2+Nfer_a+Tg,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a+vpd_a,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a+orgc_a,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a+ndep_a,df1_all_test))
+summary(lm(logr~log_co2+Nfer_a+max_fapar,df1_all_test))$r.squared
+summary(lm(logr~log_co2+Nfer_a+PPFD_total_a,df1_all_test))$r.squared #this one is the best
+summary(lm(logr~log_co2+Nfer_a+Tg,df1_all_test))$r.squared
+summary(lm(logr~log_co2+Nfer_a+vpd_a,df1_all_test))$r.squared
+summary(lm(logr~log_co2+Nfer_a+orgc_a,df1_all_test))$r.squared
+summary(lm(logr~log_co2+Nfer_a+ndep_a,df1_all_test))$r.squared
 
 #then - model is even worse:
-AIC(lm(logr~log_co2+Nfer_a+PPFD_total_a+max_fapar,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a+PPFD_total_a+Tg,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a+PPFD_total_a+vpd_a,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a+PPFD_total_a+orgc_a,df1_all_test))
-AIC(lm(logr~log_co2+Nfer_a+PPFD_total_a+ndep_a,df1_all_test))
+summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+max_fapar,df1_all_test))
+summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+Tg,df1_all_test))
+summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+vpd_a,df1_all_test))
+summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+orgc_a,df1_all_test))
+summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+ndep_a,df1_all_test))
 
 #so the best model is: 
 mod1 <- (lm(logr~log_co2+Nfer_a+PPFD_total_a,df1_all_test))
@@ -396,22 +396,22 @@ df2_all_test <- na.omit(df2_all[,c("dT","Nfer_a","min_fapar","max_fapar","PPFD_t
 #start stepwise regression
 #dT should be the first factor selected, then select factors step-by-step
 
-AIC(lm(logr~dT,df2_all_test))
-AIC(lm(logr~dT+Nfer_a,df2_all_test)) 
-AIC(lm(logr~dT+min_fapar,df2_all_test)) 
-AIC(lm(logr~dT+max_fapar,df2_all_test))
-AIC(lm(logr~dT+PPFD_total_a,df2_all_test))
-AIC(lm(logr~dT+vpd_a,df2_all_test))
-AIC(lm(logr~dT+orgc_a,df2_all_test))# this one is the best
-AIC(lm(logr~dT+ndep_a,df2_all_test))  
+summary(lm(logr~dT,df2_all_test))$r.squared
+summary(lm(logr~dT+Nfer_a,df2_all_test))$r.squared 
+summary(lm(logr~dT+min_fapar,df2_all_test))$r.squared 
+summary(lm(logr~dT+max_fapar,df2_all_test))$r.squared
+summary(lm(logr~dT+PPFD_total_a,df2_all_test))$r.squared
+summary(lm(logr~dT+vpd_a,df2_all_test))$r.squared
+summary(lm(logr~dT+orgc_a,df2_all_test))$r.squared# this one is the best
+summary(lm(logr~dT+ndep_a,df2_all_test))$r.squared  
 
-#then, further
-AIC(lm(logr~dT+orgc_a+Nfer_a,df2_all_test)) 
-AIC(lm(logr~dT+orgc_a+min_fapar,df2_all_test)) 
-AIC(lm(logr~dT+orgc_a+max_fapar,df2_all_test))
-AIC(lm(logr~dT+orgc_a+PPFD_total_a,df2_all_test))
-AIC(lm(logr~dT+orgc_a+vpd_a,df2_all_test))
-AIC(lm(logr~dT+orgc_a+ndep_a,df2_all_test))  
+#then, further - the additional one is non-significant
+summary(lm(logr~dT+orgc_a+Nfer_a,df2_all_test)) 
+summary(lm(logr~dT+orgc_a+min_fapar,df2_all_test))
+summary(lm(logr~dT+orgc_a+max_fapar,df2_all_test))
+summary(lm(logr~dT+orgc_a+PPFD_total_a,df2_all_test))
+summary(lm(logr~dT+orgc_a+vpd_a,df2_all_test))
+summary(lm(logr~dT+orgc_a+ndep_a,df2_all_test))  
 
 #so the best should just be:
 mod3 <- (lm(logr~orgc_a+dT,df2_all))
