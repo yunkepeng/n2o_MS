@@ -500,12 +500,11 @@ aa <- sum(conversion,na.rm=T)
 #here fraction is (grid's land area)/(total land area) at each grid
 fraction <- conversion/aa
 
-#we will assume n2o at ambient condition (n2o_a) as 329.29ppb (uncertainty 0.12)
-#value using 2016's value: https://www.eea.europa.eu/data-and-maps/daviz/atmospheric-concentration-of-carbon-dioxide-5#tab-chart_5_filters=%7B%22rowFilters%22%3A%7B%7D%3B%22columnFilters%22%3A%7B%22pre_config_polutant%22%3A%5B%22CH4%20(ppb)%22%5D%7D%7D
-
+#we will assume n2o at ambient condition (n2o_a) as 332.1 (uncertainty 0.12)
+#value using IPCC AR6 - 2019 estimates
 #then we set dT = 0.39 and 7.5, then after regressions and upscal, to get n2o_e
-final1 <- sum(329.29*fraction*exp((summary(mod3)$coefficients[1,1])+ (summary(mod3)$coefficients[2,1])*log(orgc_df$ORGC)+(summary(mod3)$coefficients[3,1])*0.39),na.rm=T)
-final3 <- sum(329.29*fraction*exp((summary(mod3)$coefficients[1,1])+ (summary(mod3)$coefficients[2,1])*log(orgc_df$ORGC)+(summary(mod3)$coefficients[3,1])*7.5),na.rm=T)
+final1 <- sum(332.1*fraction*exp((summary(mod3)$coefficients[1,1])+ (summary(mod3)$coefficients[2,1])*log(orgc_df$ORGC)+(summary(mod3)$coefficients[3,1])*0.39),na.rm=T)
+final3 <- sum(332.1*fraction*exp((summary(mod3)$coefficients[1,1])+ (summary(mod3)$coefficients[2,1])*log(orgc_df$ORGC)+(summary(mod3)$coefficients[3,1])*7.5),na.rm=T)
 final1
 final3
 
@@ -518,7 +517,7 @@ uncertainty_model <- sqrt(((summary(mod3)$coefficients[1,1])^2 *
                              summary(mod3)$coefficients[2,2]^2)+
                             ( (summary(mod3)$coefficients[3,1])^2 *
                                 summary(mod3)$coefficients[3,2]^2))
-uncertainty_fN <- sqrt(uncertainty_model^2+ (0.12/329.29)^2)
+uncertainty_fN <- sqrt(uncertainty_model^2+ (0.40/332.1)^2)
 #here uncertainty_fN presents percentage of uncertainty -> will multuply with n2o_e to get actual uncertainty
 
 #estimate emission sensitivity (ES) of our model
@@ -539,10 +538,10 @@ err_fN<-function(N,N0,C_mean,M_mean,N_mean,err_N,err_N0){
 }
 
 #value and S.E.
-#for other values here (co2, ch4, using 2016's value - see above link)
-rN_value<- fN(final3,final1,402.88,1842.4,(final3+final1)/2)/(7.50-0.39)
+#for other values here (co2, ch4, using IPCC AR6)
+rN_value<- fN(final3,final1,409.9,1866.3,(final3+final1)/2)/(7.50-0.39)
 rN_value # this is feedback value of paper
-rN_SE_value<- err_fN(final3,final1,402.88,1842.4,(final3+final1)/2,final3*uncertainty_fN,final1*uncertainty_fN)/(7.50-0.39)
+rN_SE_value<- err_fN(final3,final1,409.9,1866.3,(final3+final1)/2,final3*uncertainty_fN,final1*uncertainty_fN)/(7.50-0.39)
 rN_SE_value  # this is S.E. of feedback value of paper
 
 #value of gains - See Liu et al. SI (corrected version)
@@ -561,10 +560,10 @@ gains_uncertainty # this is S.E. of gain of paper
 lpx <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_warming_LPX_total_n2o.csv")
 
 #assume ambient n2o is still 329ppb, then we get response ratio when temperature change - so we can know concentrations
-final1_lpx <- 329.29*mean(lpx$dT_0.39)/mean(lpx$dT_0)
-final3_lpx <-329.29*mean(lpx$dT_7.5)/mean(lpx$dT_0)
+final1_lpx <- 332.1*mean(lpx$dT_0.39)/mean(lpx$dT_0)
+final3_lpx <-332.1*mean(lpx$dT_7.5)/mean(lpx$dT_0)
 
-rN_value_lpx<- fN(final3_lpx,final1_lpx,402.88,1842.4,(final3_lpx+final1_lpx)/2)/(7.50-0.39)
+rN_value_lpx<- fN(final3_lpx,final1_lpx,409.9,1866.3,(final3_lpx+final1_lpx)/2)/(7.50-0.39)
 rN_value_lpx # this is feedback value of LPX
 
 gains_lpx <- lamda*rN_value_lpx
@@ -588,11 +587,11 @@ summary(PPFD_total_df)
 
 #the method is same as warming model - but here we remove intercept term because the intercept is non-significant
 #we assume n2o at ambient condition is 380, then co2-e at 416 and 813ppm separately to get feedback value
-final1a <- sum(329.29*fraction*exp(0+ summary(mod1)$coefficients[2,1]*log(416/380)+
+final1a <- sum(332.1*fraction*exp(0+ summary(mod1)$coefficients[2,1]*log(416/380)+
                                      summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+ #here *10 is to convert n fertilisation unit from g/m2 to kg/ha
                                      summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
 
-final3a <- sum(329.29*fraction*exp(0+ summary(mod1)$coefficients[2,1]*log(813/380)+
+final3a <- sum(332.1*fraction*exp(0+ summary(mod1)$coefficients[2,1]*log(813/380)+
                                      summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+
                                      summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
 final1a
@@ -607,24 +606,24 @@ uncertainty_model2 <- sqrt(summary(mod1)$coefficients[2,1]^2 *
                              summary(mod1)$coefficients[3,2]^2+
                              summary(mod1)$coefficients[4,1]^2 *
                              summary(mod1)$coefficients[4,2]^2)
-uncertainty_fN2 <- sqrt(uncertainty_model2^2+ (0.12/329.29)^2)
+uncertainty_fN2 <- sqrt(uncertainty_model2^2+ (0.4/332.1)^2)
 #here uncertainty_fN2 presents percentage of uncertainty -> will multuply with n2o_e to get actual uncertainty
 
 #feedback value
-rN_value_eCO2<- fN(final3a,final1a,(813+416)/2,1842.4,(final3a+final1a)/2)/(813-416)
+rN_value_eCO2<- fN(final3a,final1a,(813+416)/2,1866.3,(final3a+final1a)/2)/(813-416)
 rN_value_eCO2 #feedback value of eCO2 model
-rN_value_eCO2_se <- err_fN(final3a,final1a,(813+416)/2,1842.4,(final3a+final1a)/2,final3a*uncertainty_fN2,final1a*uncertainty_fN2)/(813-416)
+rN_value_eCO2_se <- err_fN(final3a,final1a,(813+416)/2,1866.3,(final3a+final1a)/2,final3a*uncertainty_fN2,final1a*uncertainty_fN2)/(813-416)
 rN_value_eCO2_se #S.E. feedback value of eCO2 model
 
 #using LPX
 #here we input global estimation of n2o under step experiment at LPX, when eCO2 changes from 380 to 416, until 813
 #it runs 100 years - therefore show 100 values at each experiment (unit: Tg/yr)
 lpx <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_warming_LPX_total_n2o.csv")
-#assume n2o_a, again, is 329.29 (0.12)
-final1_lpx_eCO2 <- 329.29*mean(lpx$eCO2_416)/mean(lpx$dT_0)
-final3_lpx_eCO2 <-329.29*mean(lpx$eCO2_813)/mean(lpx$dT_0)
+#assume n2o_a, again, is 332.1 (0.4)
+final1_lpx_eCO2 <- 332.1*mean(lpx$eCO2_416)/mean(lpx$dT_0)
+final3_lpx_eCO2 <-332.1*mean(lpx$eCO2_813)/mean(lpx$dT_0)
 
-rN_value_eCO2_lpx<- fN(final3_lpx_eCO2,final1_lpx_eCO2,(813+416)/2,1842.4,(final3_lpx_eCO2+final1_lpx_eCO2)/2)/(813-416)
+rN_value_eCO2_lpx<- fN(final3_lpx_eCO2,final1_lpx_eCO2,(813+416)/2,1866.3,(final3_lpx_eCO2+final1_lpx_eCO2)/2)/(813-416)
 rN_value_eCO2_lpx #feedback value of eCO2 in LPX
 
 #lamda of eCO2
