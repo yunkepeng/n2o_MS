@@ -30,7 +30,7 @@ library(rworldmap)
 
 ```{r warning=FALSE}
 all_n2o_df <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_field_dataset.csv")
-#for those forest cover < 80%, remove it (around 8% of data)
+#for those forest cover < 80%, remove its LPX simulation value (around 8% of data)
 length(all_n2o_df$pred_n2o[all_n2o_df$pft=="forest"&all_n2o_df$forest_cover<0.8])/length(all_n2o_df$pred_n2o[all_n2o_df$pft=="forest"])
 all_n2o_df$pred_n2o[all_n2o_df$pft=="forest"&all_n2o_df$forest_cover<0.8] <- NA
 
@@ -605,13 +605,10 @@ summary(PPFD_total_df)
 
 #the method is same as warming model - but here we remove intercept term because the intercept is non-significant
 #we assume n2o at ambient condition is 380, then co2-e at 416 and 813ppm separately to get feedback value
-final1a <- sum(332.1*fraction*exp(0+ summary(mod1)$coefficients[2,1]*log(416/380)+
-                                     summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+ #here *10 is to convert n fertilisation unit from g/m2 to kg/ha
-                                     summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
+final1a <- sum(332.1*fraction*exp(0+summary(mod1)$coefficients[2,1]*log(416/380)+summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
+ #here *10 is to convert n fertilisation unit from g/m2 to kg/ha
 
-final3a <- sum(332.1*fraction*exp(0+ summary(mod1)$coefficients[2,1]*log(813/380)+
-                                     summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+
-                                     summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
+final3a <- sum(332.1*fraction*exp(0+summary(mod1)$coefficients[2,1]*log(813/380)+ summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
 final1a
 final3a
 
