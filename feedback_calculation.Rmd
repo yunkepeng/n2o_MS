@@ -362,7 +362,8 @@ gains_uncertainty
 gains_co2_LPX <- lamda*RF_co2_LPX
 gains_co2_LPX 
 
-
+gains_uncertainty <- sqrt(RF_co2_LPX^2 * lamda_se^2)
+gains_uncertainty
 
 ```
 
@@ -456,5 +457,8 @@ gains_uncertainty
 #gains of LPX-simulation
 gains_dT_LPX <- lamda*RF_dT_LPX
 gains_dT_LPX 
+
+gains_uncertainty <- sqrt(RF_dT_LPX^2 * se_lamda^2)
+gains_uncertainty
 
 ```
