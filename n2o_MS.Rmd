@@ -24,6 +24,8 @@ library(cowplot)
 white <- theme(plot.background=element_rect(fill="white", color="white"))
 library(maps)
 library(rworldmap)
+library(sfsmisc)
+library(MASS)
 ```
 
 ### Read data and output N2O validations
@@ -287,57 +289,19 @@ ggsave(paste("./output/field_model.jpg",sep=""), width = 25, height = 12)
 ### fit statistical model  and LPX simulations under eCO2 and warming
 
 ```{r warning=FALSE}
- #now, include co2 model
+#now, include co2 model
 df1_all <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_eCO2_dataset.csv")
-#number of observation and sites
+
 nrow(df1_all)
 nrow(unique(df1_all[,c("lon","lat")]))
 
-summary(df1_all)
-df1_all$Nfer_a<- sqrt(df1_all$Nfer)
-df1_all$PPFD_total_a <- log(df1_all$PPFD_total)
-df1_all$vpd_a <- log(df1_all$vpd)
-df1_all$orgc_a <- log(df1_all$ORGC)
-df1_all$ndep_a <- log(df1_all$ndep)
-
-#Start fitting model
-df1_all_test <- na.omit(df1_all[,c("log_co2","Nfer_a","min_fapar","max_fapar","PPFD_total_a",
-                                   "ndep_a","Tg","vpd_a","orgc_a","logr")]) 
-
-#start stepwise regression
-#log(co2-e/co2-a) should be the first factor selected, then select factors step-by-step
-summary(lm(logr~log_co2,df1_all_test))$r.squared
-summary(lm(logr~log_co2+Nfer_a,df1_all_test))$r.squared # this one is the best
-summary(lm(logr~log_co2+min_fapar,df1_all_test))$r.squared 
-summary(lm(logr~log_co2+max_fapar,df1_all_test))$r.squared
-summary(lm(logr~log_co2+PPFD_total_a,df1_all_test))$r.squared
-summary(lm(logr~log_co2+Tg,df1_all_test))$r.squared
-summary(lm(logr~log_co2+vpd_a,df1_all_test))$r.squared
-summary(lm(logr~log_co2+orgc_a,df1_all_test))$r.squared
-summary(lm(logr~log_co2+ndep_a,df1_all_test))$r.squared
-
-#then in further
-summary(lm(logr~log_co2+Nfer_a+max_fapar,df1_all_test))$r.squared
-summary(lm(logr~log_co2+Nfer_a+PPFD_total_a,df1_all_test))$r.squared #this one is the best
-summary(lm(logr~log_co2+Nfer_a+Tg,df1_all_test))$r.squared
-summary(lm(logr~log_co2+Nfer_a+vpd_a,df1_all_test))$r.squared
-summary(lm(logr~log_co2+Nfer_a+orgc_a,df1_all_test))$r.squared
-summary(lm(logr~log_co2+Nfer_a+ndep_a,df1_all_test))$r.squared
-
-#then - model is even worse:
-summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+max_fapar,df1_all_test))
-summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+Tg,df1_all_test))
-summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+vpd_a,df1_all_test))
-summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+orgc_a,df1_all_test))
-summary(lm(logr~log_co2+Nfer_a+PPFD_total_a+ndep_a,df1_all_test))
-
-#so the best model is: 
-mod1 <- (lm(logr~log_co2+Nfer_a+PPFD_total_a,df1_all_test))
+#fit model by rlm (robust linear model)
+mod1 <- rlm(logr~log_co2,df1_all)
 summary(mod1)
-r.squaredGLMM(mod1)
+f.robftest(mod1, var = "log_co2") # p-value
 
 #start LPX comparasion
-LPX_co2_sitemean <- na.omit(df1_all[,c("lon","lat","z","pft","logr","log_co2","Nfer_a","PPFD_total_a")])
+LPX_co2_sitemean <- na.omit(df1_all[,c("lon","lat","z","pft","logr","log_co2")])
 LPX_co2_sitemean <- unique(LPX_co2_sitemean[,c("lon","lat","z","pft")])
 dim(LPX_co2_sitemean)
 LPX_co2_sitemean$pft[LPX_co2_sitemean$pft=="Grassland"] <- "grassland"
@@ -345,97 +309,43 @@ LPX_co2_sitemean$pft[LPX_co2_sitemean$pft=="Forest"] <- "forest"
 LPX_co2_sitemean$pft[LPX_co2_sitemean$pft=="Cropland"] <- "cropland"
 
 lpx_n2o <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_LPX_annual_n2o.csv")
-#use the year 2006's map, since this is step experiment's initial year (2006)
-lpx_nfer <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_LPX_annual_nfer.csv")[,c("lon","lat","z","pft","year2006")]
-names(lpx_nfer) <-c("lon","lat","z","pft","nfer")
-lpx_PPFD <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_LPX_annual_PPFD.csv")[,c("lon","lat","z","pft","year2006")]
-names(lpx_PPFD) <-c("lon","lat","z","pft","PPFD")
 LPX_all <-Reduce(function(x,y) merge(x = x, y = y, c("lon","lat","z","pft"),all.x=TRUE),
-                 list(LPX_co2_sitemean,lpx_n2o,lpx_nfer,lpx_PPFD))
+                 list(LPX_co2_sitemean,lpx_n2o))
 
 #combine it into a dataframe
 a1 <- c(log(LPX_all$dT0_C416/LPX_all$dT0_C380),
         log(LPX_all$dT0_C582/LPX_all$dT0_C380),
         log(LPX_all$dT0_C813/LPX_all$dT0_C380)) #n2o
 a2 <- c(rep(log(416/380),nrow(LPX_all)),rep(log(582/380),nrow(LPX_all)),rep(log(813/380),nrow(LPX_all))) #co2
-a3 <- c(LPX_all$nfer,LPX_all$nfer,LPX_all$nfer) #nfer
-a4 <- c(LPX_all$PPFD,LPX_all$PPFD,LPX_all$PPFD) #ppfd
 
-final_lpx_data <- as.data.frame(cbind(a1,a2,a3,a4))
-names(final_lpx_data) <- c("logr","log_co2","Nfer_a","PPFD_total_a")
-final_lpx_data$Nfer_a <- sqrt(final_lpx_data$Nfer_a)
-final_lpx_data$PPFD_total_a <- log(final_lpx_data$PPFD_total_a)
 
-final_lpx_data[sapply(final_lpx_data, is.nan)] <- NA
-final_lpx_data[sapply(final_lpx_data, is.infinite)] <- NA
+final_lpx_data <- as.data.frame(cbind(a1,a2))
+names(final_lpx_data) <- c("logr","log_co2")
 
-mod2 <- (lm(logr~log_co2+Nfer_a+PPFD_total_a,final_lpx_data))
+mod2 <- (rlm(logr~log_co2,final_lpx_data))
 summary(mod2)
 
 mod1_co2 <- visreg(mod1,"log_co2",type="contrast")
-mod1_nfer <-visreg(mod1,"Nfer_a",type="contrast")
-mod1_ppfd <- visreg(mod1,"PPFD_total_a",type="contrast")
-
 mod2_co2 <- visreg(mod2,"log_co2",type="contrast")
-mod2_nfer <-visreg(mod2,"Nfer_a",type="contrast")
-mod2_ppfd <- visreg(mod2,"PPFD_total_a",type="contrast")
+
 
 fits_co2 <- dplyr::bind_rows(mutate(mod1_co2$fit, plt = "Measurement"),mutate(mod2_co2$fit, plt = "LPX"))
-fits_nfer <- dplyr::bind_rows(mutate(mod1_nfer$fit, plt = "Measurement"),mutate(mod2_nfer$fit, plt = "LPX"))
-fits_ppfd <- dplyr::bind_rows(mutate(mod1_ppfd$fit, plt = "Measurement"),mutate(mod2_ppfd$fit, plt = "LPX"))
 
 g1a <- visreg_ggplot(fits_co2,"log_co2","black","red",~paste("ln (",CO2[ele.]," / ", CO2[amb.],")"),~paste("ln (",N2O[ele.]," / ", N2O[amb.], ")"))
 g1a
 
-g2a <- visreg_ggplot(fits_nfer,"Nfer_a","black","red",~paste("sqrt Nfer (kg"," ha"^-1,")")," ")
-g2a
-
-g3a <- visreg_ggplot(fits_ppfd,"PPFD_total_a","black","red",~paste("ln total gPPFD (mol ","m"^-2,")")," ")
-g3a
-
+                        
 #warming experiments
 df2_all <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_warming_dataset.csv")
-#number of sites and observations
 nrow(df2_all)
 nrow(unique(df2_all[,c("lon","lat")]))
 
-df2_all$Nfer_a<- sqrt(df2_all$Nfer)
-df2_all$PPFD_total_a <- log(df2_all$PPFD_total)
-df2_all$vpd_a <- log(df2_all$vpd)
-df2_all$orgc_a <- log(df2_all$ORGC)
-df2_all$ndep_a <- log(df2_all$ndep)
-
-#Start fitting model
-df2_all_test <- na.omit(df2_all[,c("dT","Nfer_a","min_fapar","max_fapar","PPFD_total_a",
-                                   "ndep_a","vpd_a","orgc_a","logr")]) 
-
-#start stepwise regression
-#dT should be the first factor selected, then select factors step-by-step
-
-summary(lm(logr~dT,df2_all_test))$r.squared
-summary(lm(logr~dT+Nfer_a,df2_all_test))$r.squared 
-summary(lm(logr~dT+min_fapar,df2_all_test))$r.squared 
-summary(lm(logr~dT+max_fapar,df2_all_test))$r.squared
-summary(lm(logr~dT+PPFD_total_a,df2_all_test))$r.squared
-summary(lm(logr~dT+vpd_a,df2_all_test))$r.squared
-summary(lm(logr~dT+orgc_a,df2_all_test))$r.squared# this one is the best
-summary(lm(logr~dT+ndep_a,df2_all_test))$r.squared  
-
-#then, further - the additional one is non-significant
-summary(lm(logr~dT+orgc_a+Nfer_a,df2_all_test)) 
-summary(lm(logr~dT+orgc_a+min_fapar,df2_all_test))
-summary(lm(logr~dT+orgc_a+max_fapar,df2_all_test))
-summary(lm(logr~dT+orgc_a+PPFD_total_a,df2_all_test))
-summary(lm(logr~dT+orgc_a+vpd_a,df2_all_test))
-summary(lm(logr~dT+orgc_a+ndep_a,df2_all_test))  
-
-#so the best should just be:
-mod3 <- (lm(logr~orgc_a+dT,df2_all))
+mod3 <- (rlm(logr~dT,df2_all))
 summary(mod3)
-r.squaredGLMM(mod3)
+f.robftest(mod3, var = "dT") # p-value
 
 #applied in lpx model
-LPX_warming_sitemean <- na.omit(df2_all[,c("lon","lat","dT","orgc_a","logr")])
+LPX_warming_sitemean <- na.omit(df2_all[,c("lon","lat","dT","logr")])
 LPX_warming_sitemean <- unique(df2_all[,c("lon","lat","z","pft")])
 
 #check forestcover of all experimental sites - one site shows forest cover lower than 0.8
@@ -456,7 +366,7 @@ LPX_all <-Reduce(function(x,y) merge(x = x, y = y, c("lon","lat","z","pft"),all.
 a1 <- c(log(LPX_all$dT0.39_C380/LPX_all$dT0_C380),
         log(LPX_all$dT3.95_C380/LPX_all$dT0_C380),
         log(LPX_all$dT7.5_C380/LPX_all$dT0_C380)) #n2o
-a2 <- c(rep(0.39,nrow(LPX_all)),rep(3.95,nrow(LPX_all)),rep(7.5,nrow(LPX_all))) #co2
+a2 <- c(rep(0.39,nrow(LPX_all)),rep(3.95,nrow(LPX_all)),rep(7.5,nrow(LPX_all))) 
 
 final_lpx_data <- as.data.frame(cbind(a1,a2))
 names(final_lpx_data) <- c("logr","dT")
@@ -464,203 +374,24 @@ names(final_lpx_data) <- c("logr","dT")
 final_lpx_data[sapply(final_lpx_data, is.nan)] <- NA
 final_lpx_data[sapply(final_lpx_data, is.infinite)] <- NA
 
-mod4 <- (lm(logr~dT,final_lpx_data))
+mod4 <- (rlm(logr~dT,final_lpx_data))
 mod4_dT <-visreg(mod4,"dT",type="contrast")
-
 summary(mod4)
 
-mod3 <- (lm(logr~orgc_a+dT,df2_all))
+mod3 <- (rlm(logr~dT,df2_all))
 summary(mod3)
-mod3_orgc <- visreg(mod3,"orgc_a",type="contrast")
 mod3_dT <-visreg(mod3,"dT",type="contrast")
 
-
-fits_orgc <- dplyr::bind_rows(mutate(mod3_orgc$fit, plt = "Measurement"))
 fits_dT <- dplyr::bind_rows(mutate(mod3_dT$fit, plt = "Measurement"),mutate(mod4_dT$fit, plt = "LPX"))
-
-g4a <- visreg_ggplot(fits_orgc,"orgc_a","black","red",~paste("ln SOC (g ","kg"^-1,")"),~paste("ln (",N2O[ele.]," / ", N2O[amb.], ")"))
-g4a
-
-g5a <- visreg_ggplot(fits_dT,"dT","black","red","dT", " ")
+g5a <- visreg_ggplot(fits_dT,"dT","black","red","dT",~paste("ln (",N2O[ele.]," / ", N2O[amb.], ")"))
 g5a
 
-plot_grid(g1a+labs(title=expression(bold("eCO2 model"))),g2a,g3a,
-          g5a+labs(title=expression(bold("Warming model"))),g4a,white,
-          nrow=2,label_x = 0.8, label_y = 0.8)+white
-ggsave(paste("./output/experiment_model.jpg",sep=""), width = 15, height = 10)
+plot_grid(g1a,g5a,
+          nrow=1,label_x = 0.8, label_y = 0.8)+white
+ggsave(paste("./output/experiment_model.jpg",sep=""), width = 10, height = 5)
 
 ```
-### Calculate feedback under eCO2 and warming
 
-```{r warning=FALSE}
-#calculate feedback factor
-
-#use SOC map for upscalling
-soc_nc <- read_nc_onefile("~/data/n2o_Yunke/final_map/ORGC.nc")
-orgc_df <- as.data.frame(nc_to_df(soc_nc, varnam = "ORGC"))
-summary(orgc_df)
-
-#input functions/map for area and land cover percentage at each grid
-#so we can know actual land area at each grid
-#then we calculate (grid's land area)/(total land area) at each grid
-#this will help us to upscal to get feedback and gains values
-area_m2 <- calc_area(orgc_df$lat,0.5,0.5)
-
-#fland - to show each grid's land cover percentage
-nc <- read_nc_onefile("~/data/fland/global.fland.nc")
-output_fland <- nc_to_df(nc, varnam = "fland")
-fland <- output_fland$fland
-#area_m2 * fland = land area at each grid
-conversion <- area_m2 * fland
-aa <- sum(conversion,na.rm=T)
-#here fraction is (grid's land area)/(total land area) at each grid
-fraction <- conversion/aa
-
-#we will assume n2o at ambient condition (n2o_a) as 332.1 (uncertainty 0.12)
-#value using IPCC AR6 - 2019 estimates
-#then we set dT = 0.39 and 7.5, then after regressions and upscal, to get n2o_e
-final1 <- sum(332.1*fraction*exp((summary(mod3)$coefficients[1,1])+ (summary(mod3)$coefficients[2,1])*log(orgc_df$ORGC)+(summary(mod3)$coefficients[3,1])*0.39),na.rm=T)
-final3 <- sum(332.1*fraction*exp((summary(mod3)$coefficients[1,1])+ (summary(mod3)$coefficients[2,1])*log(orgc_df$ORGC)+(summary(mod3)$coefficients[3,1])*7.5),na.rm=T)
-final1
-final3
-
-#calculate N2Oe uncertainty
-#after error propogation: ln (n2o-e/n2o-a) = model
-#uncertainty n2o_e =n2o_e * sqrt(uncertainty-model^2 + (delta-n2o_a/ n2o_a)^2)
-uncertainty_model <- sqrt(((summary(mod3)$coefficients[1,1])^2 *
-                             summary(mod3)$coefficients[1,2]^2+
-                             (summary(mod3)$coefficients[2,1])^2 *
-                             summary(mod3)$coefficients[2,2]^2)+
-                            ( (summary(mod3)$coefficients[3,1])^2 *
-                                summary(mod3)$coefficients[3,2]^2))
-uncertainty_fN <- sqrt(uncertainty_model^2+ (0.40/332.1)^2)
-#here uncertainty_fN presents percentage of uncertainty -> will multuply with n2o_e to get actual uncertainty
-
-#estimate emission sensitivity (ES) of our model
-#using 8.08 from mean(lpx$dT_0) from LPX simulations (average Tg/yr of ambient n2o conditions)
-lpx <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_warming_LPX_total_n2o.csv")
-summary(lpx$dT_0)
-E1 <- sum(8.08*fraction*exp((summary(mod3)$coefficients[1,1])+ (summary(mod3)$coefficients[2,1])*log(orgc_df$ORGC)+(summary(mod3)$coefficients[3,1])*0.39),na.rm=T)
-E2 <- sum(8.08*fraction*exp((summary(mod3)$coefficients[1,1])+ (summary(mod3)$coefficients[2,1])*log(orgc_df$ORGC)+(summary(mod3)$coefficients[3,1])*7.5),na.rm=T)
-ES <- (E2-E1)/(7.5-0.39)
-ES 
-
-#this function is for feedback value
-fN<-function(N,N0,C_mean,M_mean,N_mean){(-8.0*10^(-6)*C_mean+4.2*10^(-6)*N_mean-4.9*10^(-6)*M_mean+0.117)*(sqrt(N)-sqrt(N0))}
-
-#this function is for uncertainty of feedback value
-err_fN<-function(N,N0,C_mean,M_mean,N_mean,err_N,err_N0){
-  DN<-Deriv(fN,"N");DM0<-Deriv(fN,"M0");DN0<-Deriv(fN,"N0")
-  sqrt( DN(N,N0,C_mean,M_mean,N_mean)^2*err_N^2 + 
-          DN0(N,N0,C_mean,M_mean,N_mean)^2*err_N0^2 )
-}
-
-#value and S.E.
-#for other values here (co2, ch4, using IPCC AR6)
-rN_value<- fN(final3,final1,409.9,1866.3,(final3+final1)/2)/(7.50-0.39)
-rN_value # this is feedback value of paper
-rN_SE_value<- err_fN(final3,final1,409.9,1866.3,(final3+final1)/2,final3*uncertainty_fN,final1*uncertainty_fN)/(7.50-0.39)
-rN_SE_value  # this is S.E. of feedback value of paper
-
-#value of gains - See Liu et al. SI (corrected version)
-lamda <- 0.875
-se_lamda <- 0.38/1.96
-
-gains <- lamda*rN_value
-gains# this is gain of paper
-
-gains_uncertainty <- sqrt(rN_value^2 * se_lamda^2 + lamda^2 * rN_SE_value^2)
-gains_uncertainty # this is S.E. of gain of paper
-
-#using LPX
-#here we input global estimation of n2o under step experiment at LPX, when dT changes from 0 to 0.39, until 7.5
-#it runs 100 years - therefore show 100 values at each experiment (unit: Tg/yr)
-lpx <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_warming_LPX_total_n2o.csv")
-
-#assume ambient n2o is still 329ppb, then we get response ratio when temperature change - so we can know concentrations
-final1_lpx <- 332.1*mean(lpx$dT_0.39)/mean(lpx$dT_0)
-final3_lpx <-332.1*mean(lpx$dT_7.5)/mean(lpx$dT_0)
-
-rN_value_lpx<- fN(final3_lpx,final1_lpx,409.9,1866.3,(final3_lpx+final1_lpx)/2)/(7.50-0.39)
-rN_value_lpx # this is feedback value of LPX
-
-gains_lpx <- lamda*rN_value_lpx
-gains_lpx # this is gain value of LPX
-
-gains_uncertainty_lpx <- sqrt(rN_value_lpx^2 * se_lamda^2 + lamda^2 * 0^2)
-gains_uncertainty_lpx # this is uncertainty of gain value of LPX
-
-#estimate emission sensitivity (ES) of LPX
-ES <- (mean(lpx$dT_7.5)-mean(lpx$dT_0))/(7.5-0)
-ES #1.05 this value is ES from LPX
-
-#co2 feedback
-#including global map from N fertilisation and PPFD
-nfer_nc <- read_nc_onefile("~/data/n2o_Yunke/final_map/nfer.nc")#unit g/m2
-nfer_df <- as.data.frame(nc_to_df(nfer_nc, varnam = "nfer"))
-summary(nfer_df)
-PPFD_total_nc <- read_nc_onefile("~/data/n2o_Yunke/final_map/PPFD_total.nc")
-PPFD_total_df <- as.data.frame(nc_to_df(PPFD_total_nc, varnam = "PPFD_total"))
-summary(PPFD_total_df)
-
-#the method is same as warming model - but here we remove intercept term because the intercept is non-significant
-#we assume n2o at ambient condition is 380, then co2-e at 416 and 813ppm separately to get feedback value
-final1a <- sum(332.1*fraction*exp(0+summary(mod1)$coefficients[2,1]*log(416/380)+summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
- #here *10 is to convert n fertilisation unit from g/m2 to kg/ha
-
-final3a <- sum(332.1*fraction*exp(0+summary(mod1)$coefficients[2,1]*log(813/380)+ summary(mod1)$coefficients[3,1]*sqrt(nfer_df$nfer*10)+summary(mod1)$coefficients[4,1]*log(PPFD_total_df$PPFD_total)),na.rm=T)
-final1a
-final3a
-
-#calculate N2Oe uncertainty
-#after error propogation: ln (n2o-e/n2o-a) = model
-#uncertainty n2o_e =n2o_e * sqrt(uncertainty-model^2 + (delta-n2o_a/ n2o_a)^2)
-uncertainty_model2 <- sqrt(summary(mod1)$coefficients[2,1]^2 *
-                             summary(mod1)$coefficients[2,2]^2 +
-                             summary(mod1)$coefficients[3,1]^2 *
-                             summary(mod1)$coefficients[3,2]^2+
-                             summary(mod1)$coefficients[4,1]^2 *
-                             summary(mod1)$coefficients[4,2]^2)
-uncertainty_fN2 <- sqrt(uncertainty_model2^2+ (0.4/332.1)^2)
-#here uncertainty_fN2 presents percentage of uncertainty -> will multuply with n2o_e to get actual uncertainty
-
-#feedback value
-rN_value_eCO2<- fN(final3a,final1a,(813+416)/2,1866.3,(final3a+final1a)/2)/(813-416)
-rN_value_eCO2 #feedback value of eCO2 model
-rN_value_eCO2_se <- err_fN(final3a,final1a,(813+416)/2,1866.3,(final3a+final1a)/2,final3a*uncertainty_fN2,final1a*uncertainty_fN2)/(813-416)
-rN_value_eCO2_se #S.E. feedback value of eCO2 model
-
-#using LPX
-#here we input global estimation of n2o under step experiment at LPX, when eCO2 changes from 380 to 416, until 813
-#it runs 100 years - therefore show 100 values at each experiment (unit: Tg/yr)
-lpx <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_warming_LPX_total_n2o.csv")
-#assume n2o_a, again, is 332.1 (0.4)
-final1_lpx_eCO2 <- 332.1*mean(lpx$eCO2_416)/mean(lpx$dT_0)
-final3_lpx_eCO2 <-332.1*mean(lpx$eCO2_813)/mean(lpx$dT_0)
-
-rN_value_eCO2_lpx<- fN(final3_lpx_eCO2,final1_lpx_eCO2,(813+416)/2,1866.3,(final3_lpx_eCO2+final1_lpx_eCO2)/2)/(813-416)
-rN_value_eCO2_lpx #feedback value of eCO2 in LPX
-
-#lamda of eCO2
-#quote from IPCC AR6:
-#The assessed ERF for a doubling of carbon dioxide compared to 1750 levels (3.93 ± 0.47 W m–2) is larger than in AR5
-lamda <- (560-280)/3.93
-lamda_se <- (560-280)*0.47/(3.93^2)
-
-gains_co2 <- lamda*rN_value_eCO2
-gains_co2 #gains of eCO2 of our model
-
-gains_uncertainty <- sqrt(rN_value_eCO2^2 * lamda_se^2 + lamda^2 * rN_value_eCO2_se^2)
-gains_uncertainty #uncertainty gains of eCO2 of our model
-
-gains_co2_lpx <- lamda*rN_value_eCO2_lpx
-gains_co2_lpx #gains of eCO2 of LPX
-
-gains_uncertainty_lpx <- sqrt(rN_value_eCO2_lpx^2 * lamda_se^2 + lamda^2 * 0^2)
-gains_uncertainty_lpx #uncertainty of gains of eCO2 of LPX
-
-
-```
 ### Show global distribution map
 
 ```{r warning=FALSE}

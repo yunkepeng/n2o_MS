@@ -1,0 +1,460 @@
+---
+title: "N2O experiments cross-check"
+author: Yunke Peng
+output: html_document
+---
+
+```{r}
+## this code is edited basing on Beni's code from https://github.com/stineb/multiGHG
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(MASS)
+library(Deriv)
+## Chose whether to diagnose flux or use explicit ocean source
+diag <- TRUE
+
+source("R/calcConc.R")
+source("R/myspline.R")
+
+## ////////////////////////////////////////////////////////////////////////////////////////////////
+## READ FILES
+## ------------------------------------------------------------------------------------------------
+
+## Read list of file names
+names <- read.table("data/runnames_historical.txt", header=F )$V1
+nsims <- length(names)
+
+## Read N2O concentration data to diagnose flux
+df_c_n2o <- read.table("data/cN2O_etheridge.dat", header=TRUE) |> 
+  as_tibble()
+
+df_c_n2o |> 
+  ggplot(aes(N2OgasAge, N2O.ppb.)) +
+  geom_point()
+
+## Read N2O emissions ANTH (=fossil+fire+manure) from Zaehle
+# df_e_n2o_ext <- read.table('/alphadata01/bstocker/input_data/ghg_data/n2o_data/eN2Oext_bysources_rcp26_HARMONIZED.dat', head=TRUE )  # on KUP server
+
+# recovered for Yunke
+df_e_n2o_ext <- read.table("data/eN2O_anth_zaehle_rcp85_harm.dat", col.names=c("year","ext")) |> 
+  as_tibble()
+
+## Read oceanic N2O source
+# df_e_n2o_oc <- read.table('/alphadata01/bstocker/multiGHG_analysis/eN2O_oc_historical.dat', col.names=c("year","emission"))  # on KUP server
+
+# recovered for Yunke
+df_e_n2o_oc <- read.table("data/eN2O_oc_historical.dat", col.names=c("year","oc")) |> 
+  as_tibble()
+
+# tmp <- data.frame( year=1765:(df_e_n2o_oc$year[1]-1), emission=rep(df_e_n2o_oc$emission[1],length(1765:(df_e_n2o_oc$year[1]-1))) )
+# df_e_n2o_oc <- rbind( tmp, df_e_n2o_oc)
+
+## Read N2O emissions from LPX simulation
+# # tmp <- read.table('/alphadata01/bstocker/output_multiGHG/eN2O_r1_historical.dat', header=F)   # on KUP server
+# lhist <- length(tmp[,1])
+# yrs.hist <- tmp[,1]
+# e.n2o <- array( NA, dim=c(lhist,nsims) )
+# for (i in seq(nsims)){
+#   filn <- paste( "/Users/yunpeng/yunkepeng/multiGHG/", '/data/eN2O_',names[i],'.dat', sep="" )
+#   e.n2o[,i] <- read.table( filn, header=F )$V2
+# }
+
+# read from just single simulation
+df_e_n2o_land <- read.table("data/eN2O_r1_historical.dat", col.names=c("year","land")) |> 
+  as_tibble() |> 
+  mutate(year = floor(year))
+
+# combine data
+df_e_n2o <- df_e_n2o_ext |> 
+  left_join(
+    df_e_n2o_oc,
+    by = "year"
+  ) |> 
+  left_join(
+    df_e_n2o_land,
+    by = "year"
+  ) |> 
+  drop_na()
+
+# scale down total emissions to match observations
+scale <- 0.955
+df_e_n2o <- df_e_n2o |> 
+  mutate(oc = scale * oc,
+         land = scale * land,
+         ext = scale * ext) |> 
+  mutate(
+    tot = ext + oc + land
+  )
+
+## ////////////////////////////////////////////////////////////////////////////////////////////////
+## CALCULATE CONCENTRATIONS
+## ------------------------------------------------------------------------------------------------
+## Define emissions (in TgN/yr) for year 2000
+e2000 <- df_e_n2o |> 
+  filter(year %in% 1996:2005) |> 
+  summarise(tot = mean(tot)) |> 
+  pull(tot)
+
+## create data, assume constant emissions after year 2005 until 3000, average over 1996-2005
+df_n2o_syn <- df_e_n2o |> 
+  dplyr::select(year, tot) |> 
+  bind_rows(
+    purrr::map_dfr(
+      as.list(2006:3000),
+      ~tibble(year = ., tot = e2000)
+    )
+  )
+
+## calculate concentrations
+df_n2o_syn <- df_n2o_syn |> 
+  mutate(concentration = calc_cN2O(tot, e2000)) |> 
+  rename(emissions = tot)
+
+
+## ////////////////////////////////////////////////////////////////////////////////////////////////
+## PLOT historical concentrations
+## ------------------------------------------------------------------------------------------------
+## time series
+ggplot() + 
+  geom_line(aes(year, concentration), data = df_n2o_syn |> filter(year > 1900 & year < 2006), color = "red") +
+  geom_point(aes(N2OgasAge, N2O.ppb., shape = SampleType), data = df_c_n2o |> filter(N2OgasAge > 1900), color = "grey50") +
+  theme_classic()
+
+## time series
+ggplot() + 
+  geom_line(aes(year, concentration), data = df_n2o_syn |> filter(year > 1900), color = "red") +
+  geom_point(aes(N2OgasAge, N2O.ppb., shape = SampleType), data = df_c_n2o |> filter(N2OgasAge > 1900), color = "grey50") +
+  theme_classic()
+
+
+## ////////////////////////////////////////////////////////////////////////////////////////////////
+## Enhanced emissions -> increased concentrations
+## ------------------------------------------------------------------------------------------------
+RR <- 1.2 # response ratio
+
+## Define emissions (in TgN/yr) for year 2000
+df_2000 <- df_e_n2o |> 
+  filter(year %in% 1996:2005) |> 
+  summarise(across(where(is.numeric), mean))
+
+## create data, assume constant emissions after year 2005 until 3000, average over 1996-2005
+df_n2o_syn <- df_e_n2o |> 
+  mutate(land_elevated = land) |> 
+  dplyr::select(-tot) |> 
+  bind_rows(
+    purrr::map_dfr(
+      as.list(2006:3000),
+      ~tibble(year = ., ext = df_2000$ext[1], oc = df_2000$oc[1], land = df_2000$land[1], land_elevated = df_2000$land[1] * RR)
+    )
+  ) |> 
+  mutate(tot = ext + oc + land,
+         tot_elevated = ext + oc + land_elevated)
+
+## calculate concentrations
+df_n2o_syn <- df_n2o_syn |> 
+  mutate(concentration = calc_cN2O(tot, df_2000$tot[1]),
+         concentration_elevated = calc_cN2O(tot_elevated, df_2000$tot[1])) |> 
+  rename(emissions = tot,
+         emissions_elevated = tot_elevated)
+
+## time series
+ggplot() + 
+  geom_line(aes(year, concentration), data = df_n2o_syn |> filter(year > 1900), color = "red") +
+  geom_line(aes(year, concentration_elevated), data = df_n2o_syn |> filter(year > 1900), color = "red", linetype = "dashed") +
+  geom_point(aes(N2OgasAge, N2O.ppb., shape = SampleType), data = df_c_n2o |> filter(N2OgasAge > 1900), color = "grey50") +
+  theme_classic() +
+  ylab("N2O concentration (ppb)")
+
+## Get concentration (N) and reference concentration (N0)
+df_n2o_syn |> 
+  filter(year == 3000) |> 
+  dplyr::select(concentration, concentration_elevated)
+
+```
+
+Above is an example code shown by Beni (not change anything). Here I will create a function that can directly input RR (response ratio) to output elevated concentration
+
+This part is for feedback and gain value for eCO2 effect on n2o
+
+```{r}
+
+calc_elv_n2o <- function(RR){
+  ## Define emissions (in TgN/yr) for year 2000
+df_2000 <- df_e_n2o |> 
+  filter(year %in% 1996:2005) |> 
+  summarise(across(where(is.numeric), mean))
+
+## create data, assume constant emissions after year 2005 until 3000, average over 1996-2005
+df_n2o_syn <- df_e_n2o |> 
+  mutate(land_elevated = land) |> 
+  dplyr::select(-tot) |> 
+  bind_rows(
+    purrr::map_dfr(
+      as.list(2006:3000),
+      ~tibble(year = ., ext = df_2000$ext[1], oc = df_2000$oc[1], land = df_2000$land[1], land_elevated = df_2000$land[1] * RR)
+    )
+  ) |> 
+  mutate(tot = ext + oc + land,
+         tot_elevated = ext + oc + land_elevated)
+
+## calculate concentrations
+df_n2o_syn <- df_n2o_syn |> 
+  mutate(concentration = calc_cN2O(tot, df_2000$tot[1]),
+         concentration_elevated = calc_cN2O(tot_elevated, df_2000$tot[1])) |> 
+  rename(emissions = tot,
+         emissions_elevated = tot_elevated)
+  
+## Get concentration (N) and reference concentration (N0)
+output_value <- df_n2o_syn |> 
+  filter(year == 3000) |> 
+  dplyr::select(concentration, concentration_elevated)
+
+  return(output_value)
+}
+
+#firtly, calculate RF and gains basing on data-driven model
+#firstly, eCO2 model
+df1_all <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_eCO2_dataset.csv")
+#fit model by rlm (robust linear model)
+mod1 <- rlm(logr~log_co2,df1_all)
+summary(mod1)
+slope <- summary(mod1)$coefficients[2,1]
+slope_SE <- summary(mod1)$coefficients[2,2]
+
+calc_elv_n2o <- function(RR){
+  ## Define emissions (in TgN/yr) for year 2000
+  df_2000 <- df_e_n2o |> 
+    filter(year %in% 1996:2005) |> 
+    summarise(across(where(is.numeric), mean))
+  
+  ## create data, assume constant emissions after year 2005 until 3000, average over 1996-2005
+  df_n2o_syn <- df_e_n2o |> 
+    mutate(land_elevated = land) |> 
+    dplyr::select(-tot) |> 
+    bind_rows(
+      purrr::map_dfr(
+        as.list(2006:3000),
+        ~tibble(year = ., ext = df_2000$ext[1], oc = df_2000$oc[1], land = df_2000$land[1], land_elevated = df_2000$land[1] * RR)
+      )
+    ) |> 
+    mutate(tot = ext + oc + land,
+           tot_elevated = ext + oc + land_elevated)
+  
+  ## calculate concentrations
+  df_n2o_syn <- df_n2o_syn |> 
+    mutate(concentration = calc_cN2O(tot, df_2000$tot[1]),
+           concentration_elevated = calc_cN2O(tot_elevated, df_2000$tot[1])) |> 
+    rename(emissions = tot,
+           emissions_elevated = tot_elevated)
+  
+  ## Get concentration (N) and reference concentration (N0)
+  output_value <- df_n2o_syn |> 
+    filter(year == 3000) |> 
+    dplyr::select(concentration, concentration_elevated)
+  
+  return(output_value)
+}
+
+
+#firstly, eCO2 model
+df1_all <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_eCO2_dataset.csv")
+summary(df1_all$co2_amb)
+summary(df1_all$co2_elv)
+
+#fit model by rlm (robust linear model)
+mod1 <- rlm(logr~log_co2,df1_all) # ln N2O[e]/N2O[a] ~ ln CO2[e]/CO2[a]
+summary(mod1)
+slope <- summary(mod1)$coefficients[2,1]
+slope_SE <- summary(mod1)$coefficients[2,2]
+#co2 at ambient condition is around 380
+summary(df1_all$co2_amb)
+summary(df1_all$co2_elv)
+
+#let's assume the situation when co2 doubles, to calculate how RR change
+#at this stage, RR should be:
+RR <- exp(slope * log(2))
+#Uncertainty of RR should be, according to error propogation:
+RR_SE <- RR*log(2)*slope_SE
+
+#therefore, N2O concentration from data-driven model is:
+n2o_a_co2model <- calc_elv_n2o(RR)[1]
+n2o_a_co2model
+n2o_e_co2model <- calc_elv_n2o(RR)[2]
+n2o_e_co2model
+
+#the uncertainty is:
+calc_elv_n2o(RR+RR_SE)[2]-calc_elv_n2o(RR)[2]
+calc_elv_n2o(RR)[2]-calc_elv_n2o(RR-RR_SE)[2]
+#very closed when quantifying lower and higher range, can just use the large value here:
+n2o_e_SE_co2model <- calc_elv_n2o(RR)[2]-calc_elv_n2o(RR-RR_SE)[2]
+
+#now, calculate n2o concentration from LPX-simulation
+lpx <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_warming_LPX_total_n2o.csv")
+#we choose two specific global estimates, they are global n2o estimation (Tg N/yr) when co2 is at 416 and 813ppm
+#they are runned from step-experiments, for 100 years
+mean(lpx$eCO2_813)
+mean(lpx$eCO2_416)
+
+#this value is (ln N2O[e]/N2O[a]) / (ln CO2[e]/CO2[a])
+slope_LPX <- log(mean(lpx$eCO2_813)/mean(lpx$eCO2_416))/log(813/416)
+slope_LPX
+
+#when co2 doubling, the value is
+RR_LPX <-  exp(slope_LPX*log(2))
+RR_LPX
+
+#therefore, N2O concentration from LPX is:
+n2o_a_co2LPX <- calc_elv_n2o(RR_LPX)[1]
+n2o_a_co2LPX
+n2o_e_co2LPX <- calc_elv_n2o(RR_LPX)[2]
+n2o_e_co2LPX
+
+#now, calculate feedback and gains of n2o in response to co2.
+
+#this function is basing on Liu et al.'s code, originally Etamin et al. 2016's paper
+#this function is for feedback value
+fN<-function(N,N0,C_mean,M_mean,N_mean){(-8.0*10^(-6)*C_mean+4.2*10^(-6)*N_mean-4.9*10^(-6)*M_mean+0.117)*(sqrt(N)-sqrt(N0))}
+#this function is for uncertainty of feedback value
+err_fN<-function(N,N0,C_mean,M_mean,N_mean,err_N,err_N0){
+  DN<-Deriv(fN,"N");DM0<-Deriv(fN,"M0");DN0<-Deriv(fN,"N0")
+  sqrt( DN(N,N0,C_mean,M_mean,N_mean)^2*err_N^2 + 
+          DN0(N,N0,C_mean,M_mean,N_mean)^2*err_N0^2 )
+}
+
+#RF: for data-driven model
+RF_co2_model <-
+  fN(n2o_e_co2model,n2o_a_co2model,
+     (760+380)/2,1866.3,(n2o_e_co2model+n2o_a_co2model)/2)/(760-380)
+
+RF_co2_model
+
+RF_SE_co2_model <- err_fN(n2o_e_co2model,n2o_a_co2model,(760+380)/2,
+       1866.3,(n2o_e_co2model+n2o_a_co2model)/2,
+       n2o_e_SE_co2model,0)/(760-380)
+
+RF_SE_co2_model
+
+#RF: for LPX model
+RF_co2_LPX <-
+  fN(n2o_e_co2LPX,n2o_a_co2LPX,
+     (760+380)/2,1866.3,(n2o_e_co2LPX+n2o_a_co2LPX)/2)/(760-380)
+
+RF_co2_LPX
+
+#lamda of eCO2
+#quote from IPCC AR6:
+#The assessed ERF for a doubling of carbon dioxide compared to 1750 levels (3.93 ± 0.47 W m–2) is larger than in AR5
+#therefore, lamda is:
+lamda <- (560-280)/3.93
+lamda_se <- (560-280)*0.47/(3.93^2)
+
+#gains:
+#gains and S.E. of data-driven model
+gains_co2_model <- lamda*RF_co2_model
+gains_co2_model 
+
+gains_uncertainty <- sqrt(RF_co2_model^2 * lamda_se^2 + lamda^2 * RF_SE_co2_model^2)
+gains_uncertainty
+
+#gains of LPX-simulation
+gains_co2_LPX <- lamda*RF_co2_LPX
+gains_co2_LPX 
+
+
+
+```
+
+This part is for feedback and gain value for warming effect on n2o
+
+```{r}
+
+#now, for warming model
+df2_all <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_warming_dataset.csv")
+
+mod3 <- (rlm(logr~dT,df2_all))
+summary(mod3)
+
+slope <- summary(mod3)$coefficients[2,1]
+slope_SE <- summary(mod3)$coefficients[2,2]
+
+#here is slope is log(n2o[e]/n2o[a])/dT, since dT = 1
+#the response ratio n2o[e]/n2o[a] should be:
+RR <- exp(slope)
+#Uncertainty of RR should be, according to error propogation:
+RR_SE <- RR*slope_SE
+
+#therefore, N2O concentration from data-driven model is:
+n2o_a_dTmodel <- calc_elv_n2o(RR)[1]
+n2o_a_dTmodel
+n2o_e_dTmodel <- calc_elv_n2o(RR)[2]
+n2o_e_dTmodel
+
+#the uncertainty is:
+calc_elv_n2o(RR+RR_SE)[2]-calc_elv_n2o(RR)[2]
+calc_elv_n2o(RR)[2]-calc_elv_n2o(RR-RR_SE)[2]
+#very closed when quantifying lower and higher range, can just use the large value here:
+n2o_e_SE_dTmodel <- calc_elv_n2o(RR)[2]-calc_elv_n2o(RR-RR_SE)[2]
+
+#now, calculate n2o concentration from LPX-simulation
+lpx <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_warming_LPX_total_n2o.csv")
+#we choose two specific global estimates, they are global n2o estimation (Tg N/yr) when dT increases from 0 to 3.95degC
+#they are runned from step-experiments, for 100 years
+mean(lpx$dT_0)
+mean(lpx$dT_3.95)
+
+#this value is (ln N2O[e]/N2O[a]) / dT
+slope_LPX <- log(mean(lpx$dT_3.95)/mean(lpx$dT_0))/3.95
+slope_LPX
+
+#when since dT = 1, response ratio (n2o[e]/n2o[a]) is 
+RR_LPX <-  exp(slope_LPX*1)
+RR_LPX
+
+#therefore, N2O concentration from LPX is:
+n2o_a_dTLPX <- calc_elv_n2o(RR_LPX)[1]
+n2o_a_dTLPX
+n2o_e_dTLPX <- calc_elv_n2o(RR_LPX)[2]
+n2o_e_dTLPX
+
+#now, calculate feedback and gains of n2o in response to co2.
+
+#RF: for data-driven model
+RF_dT_model <-
+  fN(n2o_e_dTmodel,n2o_a_dTmodel,
+     402.88,1866.3,(n2o_e_dTmodel+n2o_a_dTmodel)/2)
+
+RF_dT_model
+
+RF_SE_dT_model <- err_fN(n2o_e_dTmodel,n2o_a_dTmodel,
+                         402.88,1866.3,(n2o_e_dTmodel+n2o_a_dTmodel)/2,
+                          n2o_e_SE_dTmodel,0)
+
+RF_SE_dT_model
+
+#RF: for LPX model
+RF_dT_LPX <-
+  fN(n2o_e_dTLPX,n2o_a_dTLPX,
+     402.88,1866.3,(n2o_e_dTLPX+n2o_a_dTLPX)/2)
+
+RF_dT_LPX
+
+#lamda of warming
+#value of gains - See Liu et al. SI (corrected version)
+lamda <- 0.875
+se_lamda <- 0.38/1.96
+
+#gains:
+#gains and S.E. of data-driven model
+gains_dT_model <- lamda*RF_dT_model
+gains_dT_model 
+
+gains_uncertainty <- sqrt(RF_dT_model^2 * se_lamda^2 + lamda^2 * RF_SE_dT_model^2)
+gains_uncertainty
+
+#gains of LPX-simulation
+gains_dT_LPX <- lamda*RF_dT_LPX
+gains_dT_LPX 
+
+```
