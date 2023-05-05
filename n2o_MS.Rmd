@@ -342,7 +342,7 @@ nrow(unique(df2_all[,c("lon","lat")]))
 
 mod3 <- (rlm(logr~dT,df2_all))
 summary(mod3)
-f.robftest(mod3, var = "dT") # p-value
+f.robftest(mod3, var = "dT") # p-value, obtained from https://stats.stackexchange.com/questions/205614/p-values-and-significance-in-rlm-mass-package-r
 
 #applied in lpx model
 LPX_warming_sitemean <- na.omit(df2_all[,c("lon","lat","dT","logr")])

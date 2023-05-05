@@ -323,32 +323,33 @@ err_fN<-function(N,N0,C_mean,M_mean,N_mean,err_N,err_N0){
           DN0(N,N0,C_mean,M_mean,N_mean)^2*err_N0^2 )
 }
 
-#RF: for data-driven model
+#RF: for data-driven model (assuming co2 doubles, here 380 and 760ppm just as an example value, it doesn't matter too much which value we choose here.)
+
 RF_co2_model <-
   fN(n2o_e_co2model,n2o_a_co2model,
-     (760+380)/2,1866.3,(n2o_e_co2model+n2o_a_co2model)/2)/(760-380)
+     (760+380)/2,1866.3,n2o_e_co2model)
 
 RF_co2_model
 
 RF_SE_co2_model <- err_fN(n2o_e_co2model,n2o_a_co2model,(760+380)/2,
-       1866.3,(n2o_e_co2model+n2o_a_co2model)/2,
-       n2o_e_SE_co2model,0)/(760-380)
+       1866.3,n2o_e_co2model,
+       n2o_e_SE_co2model,0)
 
 RF_SE_co2_model
 
 #RF: for LPX model
 RF_co2_LPX <-
   fN(n2o_e_co2LPX,n2o_a_co2LPX,
-     (760+380)/2,1866.3,(n2o_e_co2LPX+n2o_a_co2LPX)/2)/(760-380)
+     (760+380)/2,1866.3,n2o_e_co2LPX)
 
 RF_co2_LPX
 
 #lamda of eCO2
 #quote from IPCC AR6:
 #The assessed ERF for a doubling of carbon dioxide compared to 1750 levels (3.93 ± 0.47 W m–2) is larger than in AR5
-#therefore, lamda is:
-lamda <- (560-280)/3.93
-lamda_se <- (560-280)*0.47/(3.93^2)
+#therefore, lamda is: 1/3.93
+lamda <- 1/3.93
+lamda_se <- 0.47/(3.93^2)
 
 #gains:
 #gains and S.E. of data-driven model
@@ -424,12 +425,12 @@ n2o_e_dTLPX
 #RF: for data-driven model
 RF_dT_model <-
   fN(n2o_e_dTmodel,n2o_a_dTmodel,
-     402.88,1866.3,(n2o_e_dTmodel+n2o_a_dTmodel)/2)
+     402.88,1866.3,n2o_e_dTmodel)
 
 RF_dT_model
 
 RF_SE_dT_model <- err_fN(n2o_e_dTmodel,n2o_a_dTmodel,
-                         402.88,1866.3,(n2o_e_dTmodel+n2o_a_dTmodel)/2,
+                         402.88,1866.3,n2o_e_dTmodel,
                           n2o_e_SE_dTmodel,0)
 
 RF_SE_dT_model
@@ -437,7 +438,7 @@ RF_SE_dT_model
 #RF: for LPX model
 RF_dT_LPX <-
   fN(n2o_e_dTLPX,n2o_a_dTLPX,
-     402.88,1866.3,(n2o_e_dTLPX+n2o_a_dTLPX)/2)
+     402.88,1866.3,n2o_e_dTLPX)
 
 RF_dT_LPX
 
