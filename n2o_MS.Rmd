@@ -298,6 +298,7 @@ nrow(unique(df1_all[,c("lon","lat")]))
 #fit model by rlm (robust linear model)
 mod1 <- rlm(logr~log_co2,df1_all)
 summary(mod1)
+summary(df1_all$logr)
 f.robftest(mod1, var = "log_co2") # p-value
 
 #start LPX comparasion

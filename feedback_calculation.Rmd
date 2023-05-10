@@ -425,12 +425,12 @@ n2o_e_dTLPX
 #RF: for data-driven model
 RF_dT_model <-
   fN(n2o_e_dTmodel,n2o_a_dTmodel,
-     402.88,1866.3,n2o_e_dTmodel)
+     409.9,1866.3,n2o_e_dTmodel)
 
 RF_dT_model
 
 RF_SE_dT_model <- err_fN(n2o_e_dTmodel,n2o_a_dTmodel,
-                         402.88,1866.3,n2o_e_dTmodel,
+                         409.9,1866.3,n2o_e_dTmodel,
                           n2o_e_SE_dTmodel,0)
 
 RF_SE_dT_model
@@ -438,7 +438,7 @@ RF_SE_dT_model
 #RF: for LPX model
 RF_dT_LPX <-
   fN(n2o_e_dTLPX,n2o_a_dTLPX,
-     402.88,1866.3,n2o_e_dTLPX)
+     409.9,1866.3,n2o_e_dTLPX)
 
 RF_dT_LPX
 
