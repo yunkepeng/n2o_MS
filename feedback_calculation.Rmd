@@ -96,6 +96,8 @@ e2000 <- df_e_n2o |>
   filter(year %in% 1996:2005) |> 
   summarise(tot = mean(tot)) |> 
   pull(tot)
+#print its value, emission
+e2000
 
 ## create data, assume constant emissions after year 2005 until 3000, average over 1996-2005
 df_n2o_syn <- df_e_n2o |> 

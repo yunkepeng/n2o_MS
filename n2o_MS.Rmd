@@ -325,6 +325,7 @@ names(final_lpx_data) <- c("logr","log_co2")
 
 mod2 <- (rlm(logr~log_co2,final_lpx_data))
 summary(mod2)
+f.robftest(mod2, var = "log_co2") 
 
 mod1_co2 <- visreg(mod1,"log_co2",type="contrast")
 mod2_co2 <- visreg(mod2,"log_co2",type="contrast")
@@ -332,7 +333,7 @@ mod2_co2 <- visreg(mod2,"log_co2",type="contrast")
 
 fits_co2 <- dplyr::bind_rows(mutate(mod1_co2$fit, plt = "Measurement"),mutate(mod2_co2$fit, plt = "LPX"))
 
-g1a <- visreg_ggplot(fits_co2,"log_co2","black","red",~paste("ln (",CO2[e.]," / ", CO2[a.],")"),~paste("ln (",N2O[e.]," / ", N2O[a.], ")"))
+g1a <- visreg_ggplot(fits_co2,"log_co2","black","red",~paste("ln (",CO2[ele]," / ", CO2[amb],")"),~paste("ln (",N2O[ele]," / ", N2O[amb], ")"))
 g1a
 
                         
@@ -378,13 +379,12 @@ final_lpx_data[sapply(final_lpx_data, is.infinite)] <- NA
 mod4 <- (rlm(logr~dT,final_lpx_data))
 mod4_dT <-visreg(mod4,"dT",type="contrast")
 summary(mod4)
+f.robftest(mod4, var = "dT") 
 
-mod3 <- (rlm(logr~dT,df2_all))
-summary(mod3)
 mod3_dT <-visreg(mod3,"dT",type="contrast")
 
 fits_dT <- dplyr::bind_rows(mutate(mod3_dT$fit, plt = "Measurement"),mutate(mod4_dT$fit, plt = "LPX"))
-g5a <- visreg_ggplot(fits_dT,"dT","black","red","dT (°C)",~paste("ln (",N2O[e.]," / ", N2O[a.], ")"))
+g5a <- visreg_ggplot(fits_dT,"dT","black","red","dT (°C)",~paste("ln (",N2O[ele]," / ", N2O[amb], ")"))
 g5a
 
 plot_grid(g1a,g5a,
