@@ -32,6 +32,15 @@ library(MASS)
 
 ```{r warning=FALSE}
 all_n2o_df <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_field_dataset.csv")
+
+#check numbers
+moisture_percentage <- nrow(subset(all_n2o_df,is.na(obs_moisture)==F&is.na(obs_n2o)==F))/nrow(subset(all_n2o_df,is.na(obs_n2o)==F))
+moisture_percentage
+
+nfer_percentage <- nrow(subset(all_n2o_df,is.na(Nfer_kgha)==F&is.na(obs_n2o)==F))/nrow(subset(all_n2o_df,is.na(obs_n2o)==F))
+
+nfer_percentage
+
 #for those forest cover < 80%, remove its LPX simulation value (around 8% of data)
 length(all_n2o_df$pred_n2o[all_n2o_df$pft=="forest"&all_n2o_df$forest_cover<0.8])/length(all_n2o_df$pred_n2o[all_n2o_df$pft=="forest"])
 all_n2o_df$pred_n2o[all_n2o_df$pft=="forest"&all_n2o_df$forest_cover<0.8] <- NA
