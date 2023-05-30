@@ -26,12 +26,16 @@ library(maps)
 library(rworldmap)
 library(sfsmisc)
 library(MASS)
+
+#data transfer
+source("R/data_transfer.R")
+
 ```
 
 ### Read data and output N2O validations
 
 ```{r warning=FALSE}
-all_n2o_df <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_field_dataset.csv")
+all_n2o_df <- read.csv(all_n2o_df_path)
 
 #check numbers
 moisture_percentage <- nrow(subset(all_n2o_df,is.na(obs_moisture)==F&is.na(obs_n2o)==F))/nrow(subset(all_n2o_df,is.na(obs_n2o)==F))
@@ -109,9 +113,9 @@ forest_moisture_data_forLPX <- na.omit(subset(all_n2o_df,pft=="forest")[,c("n2o_
 
 forest_data_sitemean <- unique(forest_moisture_data_forLPX[,c("lon","lat","z","pft")])
 
-lpx_forest_n2o <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_n2o.csv"),pft=="forest")
-lpx_forest_moisture <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_moisture.csv"),pft=="forest")
-lpx_forest_temperature <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_T.csv"),pft=="forest")
+lpx_forest_n2o <- subset(read.csv(lpx_forest_n2o_path),pft=="forest")
+lpx_forest_moisture <- subset(read.csv(lpx_forest_moisture_path),pft=="forest")
+lpx_forest_temperature <- subset(read.csv(lpx_forest_temperature_path),pft=="forest")
 
 LPX_forest_sitemean_n2o <- merge(forest_data_sitemean,lpx_forest_n2o,by=c("lon","lat","z","pft"),all.x=TRUE)
 LPX_forest_sitemean_moisture <- merge(forest_data_sitemean,lpx_forest_moisture,by=c("lon","lat","z","pft"),all.x=TRUE)
@@ -158,9 +162,9 @@ r.squaredGLMM(mod3)
 #merged with LPX simulations (year-by-year SH6 simulations from 1980 to 2016, for all sites)
 grassland_data_sitemean <- unique(grassland_data[,c("lon","lat","z","pft")])
 
-lpx_grassland_n2o <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_n2o.csv"),pft=="grassland")
-lpx_grassland_nfer <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_nfer.csv"),pft=="grassland")
-lpx_grassland_minfapar <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_actual_minfapar.csv"),pft=="grassland")
+lpx_grassland_n2o <- subset(read.csv(lpx_grassland_n2o_path),pft=="grassland")
+lpx_grassland_nfer <- subset(read.csv(lpx_grassland_nfer_path),pft=="grassland")
+lpx_grassland_minfapar <- subset(read.csv(lpx_grassland_minfapar_path),pft=="grassland")
 
 LPX_grassland_sitemean_n2o <- merge(grassland_data_sitemean,lpx_grassland_n2o,by=c("lon","lat","z","pft"),all.x=TRUE)
 LPX_grassland_sitemean_nfer <- merge(grassland_data_sitemean,lpx_grassland_nfer,by=c("lon","lat","z","pft"),all.x=TRUE)
@@ -218,12 +222,12 @@ r.squaredGLMM(mod5)
 LPX_cropland_sitemean <- unique(cropland_data[,c("lon","lat","z","pft")])
 
 #merged with LPX simulations (year-by-year SH6 simulations from 1980 to 2016, for all sites)
-lpx_cropland_n2o <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_n2o.csv"),pft=="cropland")
-lpx_cropland_nfer <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_nfer.csv"),pft=="cropland")
-lpx_cropland_temperature <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_T.csv"),pft=="cropland")
-lpx_cropland_PPFD <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_PPFD.csv"),pft=="cropland")
-lpx_cropland_maxfapar <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_actual_maxfapar.csv"),pft=="cropland")
-lpx_cropland_minfapar <- subset(read.csv("~/data/n2o_Yunke/final_forcing/LPX_annual_actual_minfapar.csv"),pft=="cropland")
+lpx_cropland_n2o <- subset(read.csv(lpx_cropland_n2o_path),pft=="cropland")
+lpx_cropland_nfer <- subset(read.csv(lpx_cropland_nfer_path),pft=="cropland")
+lpx_cropland_temperature <- subset(read.csv(lpx_cropland_temperature_path),pft=="cropland")
+lpx_cropland_PPFD <- subset(read.csv(lpx_cropland_PPFD_path),pft=="cropland")
+lpx_cropland_maxfapar <- subset(read.csv(lpx_cropland_maxfapar_path),pft=="cropland")
+lpx_cropland_minfapar <- subset(read.csv(lpx_cropland_minfapar_path),pft=="cropland")
 
 LPX_cropland_sitemean_n2o <- merge(LPX_cropland_sitemean,lpx_cropland_n2o,by=c("lon","lat","z","pft"),all.x=TRUE)
 LPX_cropland_sitemean_nfer <- merge(LPX_cropland_sitemean,lpx_cropland_nfer,by=c("lon","lat","z","pft"),all.x=TRUE)
@@ -299,7 +303,7 @@ ggsave(paste("./output/field_model.jpg",sep=""), width = 25, height = 12)
 
 ```{r warning=FALSE}
 #now, include co2 model
-df1_all <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_eCO2_dataset.csv")
+df1_all <- read.csv(df1_all_path)
 
 nrow(df1_all)
 nrow(unique(df1_all[,c("lon","lat")]))
@@ -318,7 +322,7 @@ LPX_co2_sitemean$pft[LPX_co2_sitemean$pft=="Grassland"] <- "grassland"
 LPX_co2_sitemean$pft[LPX_co2_sitemean$pft=="Forest"] <- "forest"
 LPX_co2_sitemean$pft[LPX_co2_sitemean$pft=="Cropland"] <- "cropland"
 
-lpx_n2o <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_LPX_annual_n2o.csv")
+lpx_n2o <- read.csv(lpx_n2o_path)
 LPX_all <-Reduce(function(x,y) merge(x = x, y = y, c("lon","lat","z","pft"),all.x=TRUE),
                  list(LPX_co2_sitemean,lpx_n2o))
 
@@ -347,7 +351,7 @@ g1a
 
                         
 #warming experiments
-df2_all <- read.csv("~/data/n2o_Yunke/final_obs_dataset/obs_warming_dataset.csv")
+df2_all <- read.csv(df2_all_path)
 nrow(df2_all)
 nrow(unique(df2_all[,c("lon","lat")]))
 
@@ -360,12 +364,12 @@ LPX_warming_sitemean <- na.omit(df2_all[,c("lon","lat","dT","logr")])
 LPX_warming_sitemean <- unique(df2_all[,c("lon","lat","z","pft")])
 
 #check forestcover of all experimental sites - one site shows forest cover lower than 0.8
-co2_forestcover_site<- read.csv("~/data/n2o_Yunke/final_forcing/co2_forestcover_site.csv")
+co2_forestcover_site<- read.csv(co2_forestcover_site_path)
 subset(co2_forestcover_site,forest_cover<0.8)
 #remove lon==91.758 (since it has vegetation cover less than 80%)
 LPX_warming_sitemean <- subset(LPX_warming_sitemean,lon!=91.758)
 
-lpx_n2o <- read.csv("~/data/n2o_Yunke/final_forcing/eCO2_LPX_annual_n2o.csv")
+lpx_n2o <- read.csv(lpx_n2o_path)
 
 LPX_warming_sitemean$pft[LPX_warming_sitemean$pft=="Grassland"] <- "grassland"
 LPX_warming_sitemean$pft[LPX_warming_sitemean$pft=="Forest"] <- "forest"
