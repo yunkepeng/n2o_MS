@@ -55,20 +55,19 @@ all_n2o_df$log_obs_n2o <- log(all_n2o_df$obs_n2o)
 
 a1 <- analyse_modobs2(subset(all_n2o_df,pft=="forest"),"log_pred_n2o","log_obs_n2o", type = "points",relative=TRUE)$gg+
   theme(axis.text=element_text(size=15),axis.title=element_text(size=15),
-        plot.subtitle=element_text(size=15))+labs(x=~paste("Forest ln ", N[2], O[pred.], " (", mu,"g m"^-2," h"^-1,")"))+labs(y=~paste("Forest ln ", N[2], O[obs.], " (", mu,"g m"^-2," h"^-1,")"))+xlim(-2,4)+ylim(-2.5,7.5)
+        plot.subtitle=element_text(size=15))+labs(x=~paste("ln ", N[2], O[pred.], " (", mu,"g m"^-2," h"^-1,")"))+labs(y=~paste("ln ", N[2], O[obs.], " (", mu,"g m"^-2," h"^-1,")"))+xlim(-2,4)+ylim(-2.5,7.5)+ggtitle("(a) Forest")
 
 
 a2 <- analyse_modobs2(subset(all_n2o_df,pft=="grassland"),"log_pred_n2o","log_obs_n2o", type = "points",relative=TRUE)$gg+
   theme(axis.text=element_text(size=15),axis.title=element_text(size=15),
-        plot.subtitle=element_text(size=15))+labs(x=~paste("Grassland ln ", N[2], O[pred.], " (", mu,"g m"^-2," h"^-1,")"))+labs(y=~paste("Grassland ln ", N[2], O[obs.], " (", mu,"g m"^-2," h"^-1,")"))+xlim(-2,4)+ylim(-2.5,7.5)
+        plot.subtitle=element_text(size=15))+labs(x=~paste("ln ", N[2], O[pred.], " (", mu,"g m"^-2," h"^-1,")"))+labs(y=~paste("ln ", N[2], O[obs.], " (", mu,"g m"^-2," h"^-1,")"))+xlim(-2,4)+ylim(-2.5,7.5)+ggtitle("(b) Grassland")
 
 a3 <- analyse_modobs2(subset(all_n2o_df,pft=="cropland"),"log_pred_n2o","log_obs_n2o", type = "points",relative=TRUE)$gg+
   theme(axis.text=element_text(size=15),axis.title=element_text(size=15),
-        plot.subtitle=element_text(size=15))+labs(x=~paste("Cropland ln ", N[2], O[pred.], " (", mu,"g m"^-2," h"^-1,")"))+labs(y=~paste("Cropland ln ", N[2], O[obs.], " (", mu,"g m"^-2," h"^-1,")"))+xlim(-2,4)+ylim(-2.5,7.5)
+        plot.subtitle=element_text(size=15))+labs(x=~paste("ln ", N[2], O[pred.], " (", mu,"g m"^-2," h"^-1,")"))+labs(y=~paste("ln ", N[2], O[obs.], " (", mu,"g m"^-2," h"^-1,")"))+xlim(-2,4)+ylim(-2.5,7.5)+ggtitle("(c) Cropland")
 
 plot_grid(a1,a2,a3,
-          labels = c('(a)','(b)','(c)'),
-          nrow=1,label_x = 0.15,label_y=0.92)+white
+          nrow=1)+white
 
 ggsave(paste("./output/validation.jpg",sep=""),width = 15, height = 5)
 
